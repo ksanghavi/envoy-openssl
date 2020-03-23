@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <deque>
 #include <functional>
 #include <string>
@@ -12,20 +11,18 @@
 /*
 #include "envoy/ssl/private_key/private_key.h"
 */
-#include "envoy/ssl/ssl_socket_extended_info.h"
 #include "envoy/stats/scope.h"
 #include "envoy/stats/stats_macros.h"
 
-#include "common/common/matchers.h"
 #include "common/stats/symbol_table_impl.h"
 
 #include "extensions/transport_sockets/tls/context_manager_impl.h"
 #include "extensions/transport_sockets/tls/openssl_impl.h"
 
 #include "absl/synchronization/mutex.h"
+#include "absl/types/optional.h"
 #include "boringssl_compat/bssl.h"
 #include "openssl/ssl.h"
-#include "openssl/x509v3.h"
 
 namespace Envoy {
 #ifdef OPENSSL_IS_BORINGSSL
@@ -76,16 +73,6 @@ public:
   static bool verifySubjectAltName(X509* cert, const std::vector<std::string>& subject_alt_names);
 
   /**
-   * Performs subjectAltName matching with the provided matchers.
-   * @param ssl the certificate to verify
-   * @param subject_alt_name_matchers the configured matchers to match
-   * @return true if the verification succeeds
-   */
-  static bool
-  matchSubjectAltName(X509* cert,
-                      const std::vector<Matchers::StringMatcherImpl>& subject_alt_name_matchers);
-
-  /**
    * Determines whether the given name matches 'pattern' which may optionally begin with a wildcard.
    * NOTE:  public for testing
    * @param dns_name the DNS name to match
@@ -95,12 +82,6 @@ public:
   static bool dnsNameMatch(const std::string& dns_name, const char* pattern);
 
   SslStats& stats() { return stats_; }
-
-  /**
-   * The global SSL-library index used for storing a pointer to the SslExtendedSocketInfo
-   * class in the SSL instance, for retrieval in callbacks.
-   */
-  static int sslExtendedSocketInfoIndex();
 
   // Ssl::Context
   size_t daysUntilFirstCertExpires() const override;
@@ -125,9 +106,7 @@ protected:
   // A SSL_CTX_set_cert_verify_callback for custom cert validation.
   static int verifyCallback(X509_STORE_CTX* store_ctx, void* arg);
 
-  Envoy::Ssl::ClientValidationStatus
-  verifyCertificate(X509* cert, const std::vector<std::string>& verify_san_list,
-                    const std::vector<Matchers::StringMatcherImpl>& subject_alt_name_matchers);
+  int verifyCertificate(X509* cert, const std::vector<std::string>& verify_san_list);
 
   /**
    * Verifies certificate hash for pinning. The hash is a hex-encoded SHA-256 of the DER-encoded
@@ -157,7 +136,6 @@ protected:
   std::string getCaFileName() const { return ca_file_path_; };
   void incCounter(const Stats::StatName name, absl::string_view value,
                   const Stats::StatName fallback) const;
-  static std::string generalNameAsString(const GENERAL_NAME* general_name);
 
   Envoy::Ssl::CertificateDetailsPtr certificateDetails(X509* cert, const std::string& path) const;
 
@@ -192,10 +170,8 @@ protected:
   std::vector<TlsContext> tls_contexts_;
   bool verify_trusted_ca_{false};
   std::vector<std::string> verify_subject_alt_name_list_;
-  std::vector<Matchers::StringMatcherImpl> subject_alt_name_matchers_;
   std::vector<std::vector<uint8_t>> verify_certificate_hash_list_;
   std::vector<std::vector<uint8_t>> verify_certificate_spki_list_;
-  bool allow_untrusted_certificate_{false};
   Stats::Scope& scope_;
   SslStats stats_;
   std::vector<uint8_t> parsed_alpn_protocols_;
@@ -245,8 +221,6 @@ public:
                     const std::vector<std::string>& server_names, TimeSource& time_source);
 
 private:
-  using SessionContextID = std::array<uint8_t, SSL_MAX_SSL_SESSION_ID_LENGTH>;
-
   int alpnSelectCallback(const unsigned char** out, unsigned char* outlen, const unsigned char* in,
                          unsigned int inlen);
   int sessionTicketProcess(SSL* ssl, uint8_t* key_name, uint8_t* iv, EVP_CIPHER_CTX* ctx,
@@ -256,7 +230,8 @@ private:
   // ClientHello details.
   void selectTlsContext(SSL* ssl);
 
-  SessionContextID generateHashForSessionContextId(const std::vector<std::string>& server_names);
+  void generateHashForSessionContexId(const std::vector<std::string>& server_names,
+                                      uint8_t* session_context_buf, unsigned& session_context_len);
 
   const std::vector<Envoy::Ssl::ServerContextConfig::SessionTicketKey> session_ticket_keys_;
 };

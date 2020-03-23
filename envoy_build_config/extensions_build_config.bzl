@@ -21,7 +21,7 @@ EXTENSIONS = {
     #
 
     "envoy.grpc_credentials.file_based_metadata":       "@envoy//source/extensions/grpc_credentials/file_based_metadata:config",
-    "envoy.grpc_credentials.aws_iam":                   "@envoy_openssl//source/extensions/grpc_credentials/aws_iam:config",
+    #"envoy.grpc_credentials.aws_iam":                   "@envoy_openssl//source/extensions/grpc_credentials/aws_iam:config",
 
     #
     # Health checkers
@@ -34,9 +34,9 @@ EXTENSIONS = {
     #
 
     "envoy.filters.http.adaptive_concurrency":          "@envoy//source/extensions/filters/http/adaptive_concurrency:config",
-    "envoy.filters.http.aws_request_signing":           "@envoy_openssl//source/extensions/filters/http/aws_request_signing:config",
+    #"envoy.filters.http.aws_request_signing":           "@envoy_openssl//source/extensions/filters/http/aws_request_signing:config",
     "envoy.filters.http.buffer":                        "@envoy//source/extensions/filters/http/buffer:config",
-    "envoy.filters.http.cache":                         "@envoy//source/extensions/filters/http/cache:config",
+    #"envoy.filters.http.cache":                         "@envoy//source/extensions/filters/http/cache:config",
     "envoy.filters.http.cors":                          "@envoy//source/extensions/filters/http/cors:config",
     "envoy.filters.http.csrf":                          "@envoy//source/extensions/filters/http/csrf:config",
     "envoy.filters.http.dynamic_forward_proxy":         "@envoy//source/extensions/filters/http/dynamic_forward_proxy:config",
@@ -159,7 +159,7 @@ EXTENSIONS = {
 
     "envoy.retry_host_predicates.previous_hosts":       "@envoy//source/extensions/retry/host/previous_hosts:config",
     "envoy.retry_host_predicates.omit_canary_hosts":    "@envoy//source/extensions/retry/host/omit_canary_hosts:config",
-    "envoy.retry_host_predicates.omit_host_metadata":   "@envoy//source/extensions/retry/host/omit_host_metadata:config",
+    #"envoy.retry_host_predicates.omit_host_metadata":   "@envoy//source/extensions/retry/host/omit_host_metadata:config",
 
     #
     # Retry priorities
@@ -171,7 +171,7 @@ EXTENSIONS = {
     # CacheFilter plugins
     #
 
-    "envoy.filters.http.cache.simple_http_cache":       "@envoy//source/extensions/filters/http/cache/simple_http_cache:simple_http_cache_lib",
+    #"envoy.filters.http.cache.simple_http_cache":       "@envoy//source/extensions/filters/http/cache/simple_http_cache:simple_http_cache_lib",
 }
 
 WINDOWS_EXTENSIONS = {

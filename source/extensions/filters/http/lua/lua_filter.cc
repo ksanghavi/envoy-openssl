@@ -115,8 +115,7 @@ int StreamHandleWrapper::luaRespond(lua_State* state) {
   luaL_checktype(state, 2, LUA_TTABLE);
   size_t body_size;
   const char* raw_body = luaL_optlstring(state, 3, nullptr, &body_size);
-  auto headers = std::make_unique<Http::ResponseHeaderMapImpl>();
-  buildHeadersFromTable(*headers, state, 2);
+  Http::HeaderMapPtr headers = buildHeadersFromTable(state, 2);
 
   uint64_t status;
   if (headers->Status() == nullptr ||
@@ -138,8 +137,9 @@ int StreamHandleWrapper::luaRespond(lua_State* state) {
   return lua_yield(state, 0);
 }
 
-void StreamHandleWrapper::buildHeadersFromTable(Http::HeaderMap& headers, lua_State* state,
-                                                int table_index) {
+Http::HeaderMapPtr StreamHandleWrapper::buildHeadersFromTable(lua_State* state, int table_index) {
+  Http::HeaderMapPtr headers(new Http::HeaderMapImpl());
+
   // Build a header map to make the request. We iterate through the provided table to do this and
   // check that we are getting strings.
   lua_pushnil(state);
@@ -152,17 +152,19 @@ void StreamHandleWrapper::buildHeadersFromTable(Http::HeaderMap& headers, lua_St
       lua_pushnil(state);
       while (lua_next(state, -2) != 0) {
         const char* value = luaL_checkstring(state, -1);
-        headers.addCopy(Http::LowerCaseString(key), value);
+        headers->addCopy(Http::LowerCaseString(key), value);
         lua_pop(state, 1);
       }
     } else {
       const char* value = luaL_checkstring(state, -1);
-      headers.addCopy(Http::LowerCaseString(key), value);
+      headers->addCopy(Http::LowerCaseString(key), value);
     }
     // Removes 'value'; keeps 'key' for next iteration. This is the input for lua_next() so that
     // it can push the next key/value pair onto the stack.
     lua_pop(state, 1);
   }
+
+  return headers;
 }
 
 int StreamHandleWrapper::luaHttpCall(lua_State* state) {
@@ -181,9 +183,7 @@ int StreamHandleWrapper::luaHttpCall(lua_State* state) {
     return luaL_error(state, "http call cluster invalid. Must be configured");
   }
 
-  auto headers = std::make_unique<Http::RequestHeaderMapImpl>();
-  buildHeadersFromTable(*headers, state, 3);
-  Http::RequestMessagePtr message(new Http::RequestMessageImpl(std::move(headers)));
+  Http::MessagePtr message(new Http::RequestMessageImpl(buildHeadersFromTable(state, 3)));
 
   // Check that we were provided certain headers.
   if (message->headers().Path() == nullptr || message->headers().Method() == nullptr ||
@@ -213,7 +213,7 @@ int StreamHandleWrapper::luaHttpCall(lua_State* state) {
   }
 }
 
-void StreamHandleWrapper::onSuccess(Http::ResponseMessagePtr&& response) {
+void StreamHandleWrapper::onSuccess(Http::MessagePtr&& response) {
   ASSERT(state_ == State::HttpCall || state_ == State::Running);
   ENVOY_LOG(debug, "async HTTP response complete");
   http_request_ = nullptr;
@@ -264,10 +264,9 @@ void StreamHandleWrapper::onFailure(Http::AsyncClient::FailureReason) {
   ENVOY_LOG(debug, "async HTTP failure");
 
   // Just fake a basic 503 response.
-  Http::ResponseMessagePtr response_message(
-      new Http::ResponseMessageImpl(Http::createHeaderMap<Http::ResponseHeaderMapImpl>(
-          {{Http::Headers::get().Status,
-            std::to_string(enumToInt(Http::Code::ServiceUnavailable))}})));
+  Http::MessagePtr response_message(new Http::ResponseMessageImpl(Http::HeaderMapPtr{
+      new Http::HeaderMapImpl{{Http::Headers::get().Status,
+                               std::to_string(enumToInt(Http::Code::ServiceUnavailable))}}}));
   response_message->body() = std::make_unique<Buffer::OwnedImpl>("upstream failure");
   onSuccess(std::move(response_message));
 }
@@ -608,7 +607,7 @@ void Filter::scriptLog(spdlog::level::level_enum level, const char* message) {
   }
 }
 
-void Filter::DecoderCallbacks::respond(Http::ResponseHeaderMapPtr&& headers, Buffer::Instance* body,
+void Filter::DecoderCallbacks::respond(Http::HeaderMapPtr&& headers, Buffer::Instance* body,
                                        lua_State*) {
   callbacks_->encodeHeaders(std::move(headers), body == nullptr);
   if (body && !parent_.destroyed_) {
@@ -616,8 +615,7 @@ void Filter::DecoderCallbacks::respond(Http::ResponseHeaderMapPtr&& headers, Buf
   }
 }
 
-void Filter::EncoderCallbacks::respond(Http::ResponseHeaderMapPtr&&, Buffer::Instance*,
-                                       lua_State* state) {
+void Filter::EncoderCallbacks::respond(Http::HeaderMapPtr&&, Buffer::Instance*, lua_State* state) {
   // TODO(mattklein123): Support response in response path if nothing has been continued
   // yet.
   luaL_error(state, "respond not currently supported in the response path");

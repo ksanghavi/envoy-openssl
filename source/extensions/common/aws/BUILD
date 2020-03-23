@@ -17,25 +17,25 @@ envoy_cc_library(
     ],
 )
 
-envoy_cc_library(
-    name = "signer_impl_lib",
-    repository = "@envoy",
-    srcs = ["signer_impl.cc"],
-    hdrs = ["signer_impl.h"],
-    deps = [
-        ":credentials_provider_interface",
-        ":signer_interface",
-        ":utility_lib",
-        "@envoy//source/common/buffer:buffer_lib",
-        "@envoy//source/common/common:hex_lib",
-        "@envoy//source/common/common:logger_lib",
-        "@envoy//source/common/common:utility_lib",
-        "@envoy//source/common/crypto:utility_lib",
-        "@envoy//source/common/http:headers_lib",
-        "@envoy//source/common/singleton:const_singleton",
-        "//source/extensions/common/crypto:utility_lib",
-    ],
-)
+#envoy_cc_library(
+#    name = "signer_impl_lib",
+#    repository = "@envoy",
+#    srcs = ["signer_impl.cc"],
+#    hdrs = ["signer_impl.h"],
+#    deps = [
+#        ":credentials_provider_interface",
+#        ":signer_interface",
+#        ":utility_lib",
+#        "@envoy//source/common/buffer:buffer_lib",
+#        "@envoy//source/common/common:hex_lib",
+#        "@envoy//source/common/common:logger_lib",
+#        "@envoy//source/common/common:utility_lib",
+#        "@envoy//source/common/crypto:utility_lib",
+#        "@envoy//source/common/http:headers_lib",
+#        "@envoy//source/common/singleton:const_singleton",
+#        "//source/extensions/common/crypto:utility_lib",
+#    ],
+#)
 
 envoy_cc_library(
     name = "credentials_provider_interface",
